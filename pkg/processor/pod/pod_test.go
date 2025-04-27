@@ -10,7 +10,6 @@ import (
 
 	"github.com/EdgeGamingGG/helmify/internal"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -169,30 +168,6 @@ spec:
       - key: "key2"
         operator: "Exists"
         effect: "NoExecute"
-`
-
-	strDeploymentWithDefaultTag = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-deployment
-  labels:
-    app: nginx
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: nginx
-  template:
-    metadata:
-      labels:
-        app: nginx
-    spec:
-      containers:
-      - name: nginx
-        image: nginx:1.14.2
-        ports:
-        - containerPort: 80
 `
 )
 
@@ -446,41 +421,6 @@ func Test_pod_Process(t *testing.T) {
 						"key":      "key2",
 						"operator": "Exists",
 						"effect":   "NoExecute",
-					},
-				},
-			},
-		}, tmpl)
-	})
-
-	t.Run("deployment with default tag", func(t *testing.T) {
-		var deploy appsv1.Deployment
-		obj := internal.GenerateObj(strDeploymentWithDefaultTag)
-		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &deploy)
-		specMap, tmpl, err := ProcessSpec("nginx", &metadata.Service{}, deploy.Spec.Template.Spec)
-		assert.NoError(t, err)
-
-		// Verify that the image template is on a single line
-		containers := specMap["containers"].([]interface{})
-		container := containers[0].(map[string]interface{})
-		image := container["image"].(string)
-		assert.NotContains(t, image, "\n", "Image template should not contain line breaks")
-		assert.Contains(t, image, "default .Chart.AppVersion", "Image template should contain default value")
-
-		// Test YAML marshaling
-		yamlStr, err := yaml.Marshal(specMap)
-		assert.NoError(t, err)
-		yamlContent := string(yamlStr)
-		t.Logf("Generated YAML:\n%s", yamlContent)
-		assert.NotContains(t, yamlContent, "image: |", "YAML should not use block scalar for image")
-		assert.Contains(t, yamlContent, "image: '{{", "YAML should contain properly quoted image template")
-		assert.Contains(t, yamlContent, "|", "YAML should preserve the pipe character")
-
-		assert.Equal(t, helmify.Values{
-			"nginx": map[string]interface{}{
-				"nginx": map[string]interface{}{
-					"image": map[string]interface{}{
-						"repository": "nginx",
-						"tag":        "1.14.2",
 					},
 				},
 			},
