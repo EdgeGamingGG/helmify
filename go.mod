@@ -1,4 +1,4 @@
-module github.com/arttor/helmify
+module github.com/EdgeGamingGG/helmify
 
 go 1.21
 

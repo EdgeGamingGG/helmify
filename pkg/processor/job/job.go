@@ -2,10 +2,10 @@ package job
 
 import (
 	"fmt"
-	"github.com/arttor/helmify/pkg/helmify"
-	"github.com/arttor/helmify/pkg/processor"
-	"github.com/arttor/helmify/pkg/processor/pod"
-	yamlformat "github.com/arttor/helmify/pkg/yaml"
+	"github.com/EdgeGamingGG/helmify/pkg/helmify"
+	"github.com/EdgeGamingGG/helmify/pkg/processor"
+	"github.com/EdgeGamingGG/helmify/pkg/processor/pod"
+	yamlformat "github.com/EdgeGamingGG/helmify/pkg/yaml"
 	"github.com/iancoleman/strcase"
 	"io"
 	batchv1 "k8s.io/api/batch/v1"

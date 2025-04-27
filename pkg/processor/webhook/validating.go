@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/arttor/helmify/pkg/helmify"
+	"github.com/EdgeGamingGG/helmify/pkg/helmify"
 	v1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"

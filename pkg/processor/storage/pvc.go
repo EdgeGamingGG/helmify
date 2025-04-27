@@ -2,9 +2,9 @@ package storage
 
 import (
 	"fmt"
-	"github.com/arttor/helmify/pkg/helmify"
-	"github.com/arttor/helmify/pkg/processor"
-	yamlformat "github.com/arttor/helmify/pkg/yaml"
+	"github.com/EdgeGamingGG/helmify/pkg/helmify"
+	"github.com/EdgeGamingGG/helmify/pkg/processor"
+	yamlformat "github.com/EdgeGamingGG/helmify/pkg/yaml"
 	"github.com/iancoleman/strcase"
 	"io"
 	corev1 "k8s.io/api/core/v1"

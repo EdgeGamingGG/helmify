@@ -3,12 +3,12 @@ package pod
 import (
 	"testing"
 
-	"github.com/arttor/helmify/pkg/helmify"
-	"github.com/arttor/helmify/pkg/metadata"
+	"github.com/EdgeGamingGG/helmify/pkg/helmify"
+	"github.com/EdgeGamingGG/helmify/pkg/metadata"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/arttor/helmify/internal"
+	"github.com/EdgeGamingGG/helmify/internal"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )

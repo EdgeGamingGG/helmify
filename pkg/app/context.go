@@ -1,9 +1,9 @@
 package app
 
 import (
-	"github.com/arttor/helmify/pkg/config"
-	"github.com/arttor/helmify/pkg/helmify"
-	"github.com/arttor/helmify/pkg/metadata"
+	"github.com/EdgeGamingGG/helmify/pkg/config"
+	"github.com/EdgeGamingGG/helmify/pkg/helmify"
+	"github.com/EdgeGamingGG/helmify/pkg/metadata"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
