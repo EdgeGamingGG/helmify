@@ -2,10 +2,11 @@ package statefulset
 
 import (
 	"fmt"
-	"github.com/EdgeGamingGG/helmify/pkg/processor/pod"
 	"io"
 	"strings"
 	"text/template"
+
+	"github.com/EdgeGamingGG/helmify/pkg/processor/pod"
 
 	"github.com/EdgeGamingGG/helmify/pkg/helmify"
 	"github.com/EdgeGamingGG/helmify/pkg/processor"
@@ -157,4 +158,85 @@ func (r *result) Values() helmify.Values {
 
 func (r *result) Write(writer io.Writer) error {
 	return statefulsetTempl.Execute(writer, r.data)
+}
+
+func ProcessSpec(objName string, appMeta helmify.AppMetadata, spec appsv1.StatefulSetSpec) (map[string]interface{}, helmify.Values, error) {
+	podSpecMap, podValues, err := pod.ProcessSpec(objName, appMeta, spec.Template.Spec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Process volume claim templates
+	if len(spec.VolumeClaimTemplates) > 0 {
+		for i := range spec.VolumeClaimTemplates {
+			pvc := spec.VolumeClaimTemplates[i]
+
+			// Validate required fields
+			if pvc.Spec.Resources.Requests == nil || len(pvc.Spec.Resources.Requests) == 0 {
+				return nil, nil, fmt.Errorf("volume claim template %q must specify resources.requests", pvc.Name)
+			}
+			if len(pvc.Spec.AccessModes) == 0 {
+				return nil, nil, fmt.Errorf("volume claim template %q must specify at least one access mode", pvc.Name)
+			}
+
+			pvcName := strcase.ToLowerCamel(pvc.Name)
+
+			// Add PVC template to values
+			pvcMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&pvc)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w: unable to convert PVC template to map", err)
+			}
+
+			// Clean up metadata and status
+			delete(pvcMap, "status")
+			if metadata, ok := pvcMap["metadata"].(map[string]interface{}); ok {
+				delete(metadata, "creationTimestamp")
+				if len(metadata) == 0 {
+					delete(pvcMap, "metadata")
+				}
+			}
+
+			// Template storage class name if present
+			if spec, ok := pvcMap["spec"].(map[string]interface{}); ok {
+				if storageClassName, ok := spec["storageClassName"].(string); ok {
+					spec["storageClassName"] = appMeta.TemplatedName(storageClassName)
+				}
+			}
+
+			err = unstructured.SetNestedField(podValues, pvcMap, objName, "volumeClaimTemplates", pvcName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w: unable to set PVC template value", err)
+			}
+
+			// Replace PVC template with template
+			spec.VolumeClaimTemplates[i].Name = appMeta.TemplatedName(pvc.Name)
+		}
+	}
+
+	specMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&spec)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: unable to convert StatefulSetSpec to map", err)
+	}
+
+	// Process volume claim templates for templating
+	if vcts, ok := specMap["volumeClaimTemplates"].([]interface{}); ok {
+		templatedVcts := make([]interface{}, len(vcts))
+		for i, vct := range vcts {
+			vctMap := vct.(map[string]interface{})
+			vctName := vctMap["metadata"].(map[string]interface{})["name"].(string)
+			vctNameCamel := strcase.ToLowerCamel(vctName)
+
+			// Replace volume claim template with template
+			templatedVcts[i] = fmt.Sprintf(`{{- toYaml .Values.%s.volumeClaimTemplates.%s | nindent 8 }}`, objName, vctNameCamel)
+		}
+		specMap["volumeClaimTemplates"] = templatedVcts
+	}
+
+	// Set pod spec in the template
+	err = unstructured.SetNestedMap(specMap, podSpecMap, "template", "spec")
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: unable to set pod spec in template", err)
+	}
+
+	return specMap, podValues, nil
 }

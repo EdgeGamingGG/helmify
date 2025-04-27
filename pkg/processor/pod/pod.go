@@ -25,18 +25,50 @@ func ProcessSpec(objName string, appMeta helmify.AppMetadata, spec corev1.PodSpe
 	// replace PVC to templated name
 	for i := 0; i < len(spec.Volumes); i++ {
 		vol := spec.Volumes[i]
-		if vol.PersistentVolumeClaim == nil {
-			continue
+		if vol.PersistentVolumeClaim != nil {
+			tempPVCName := appMeta.TemplatedName(vol.PersistentVolumeClaim.ClaimName)
+			spec.Volumes[i].PersistentVolumeClaim.ClaimName = tempPVCName
 		}
-		tempPVCName := appMeta.TemplatedName(vol.PersistentVolumeClaim.ClaimName)
-
-		spec.Volumes[i].PersistentVolumeClaim.ClaimName = tempPVCName
+		if vol.ConfigMap != nil {
+			vol.ConfigMap.Name = appMeta.TemplatedName(vol.ConfigMap.Name)
+		}
+		if vol.Secret != nil {
+			vol.Secret.SecretName = appMeta.TemplatedName(vol.Secret.SecretName)
+		}
+		if vol.Projected != nil {
+			for j := range vol.Projected.Sources {
+				if vol.Projected.Sources[j].ConfigMap != nil {
+					vol.Projected.Sources[j].ConfigMap.Name = appMeta.TemplatedName(vol.Projected.Sources[j].ConfigMap.Name)
+				}
+				if vol.Projected.Sources[j].Secret != nil {
+					vol.Projected.Sources[j].Secret.Name = appMeta.TemplatedName(vol.Projected.Sources[j].Secret.Name)
+				}
+			}
+		}
 	}
 
 	// replace container resources with template to values.
 	specMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&spec)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to convert podSpec to map", err)
+	}
+
+	// Process volumes for templating
+	if volumes, ok := specMap["volumes"].([]interface{}); ok {
+		for i, vol := range volumes {
+			volMap := vol.(map[string]interface{})
+			volName := volMap["name"].(string)
+			volNameCamel := strcase.ToLowerCamel(volName)
+
+			// Add volume to values
+			err = unstructured.SetNestedField(values, volMap, objName, "volumes", volNameCamel)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w: unable to set volume value", err)
+			}
+
+			// Replace volume with template
+			specMap["volumes"].([]interface{})[i] = fmt.Sprintf(`{{- toYaml .Values.%s.volumes.%s | nindent 8 }}`, objName, volNameCamel)
+		}
 	}
 
 	specMap, values, err = processNestedContainers(specMap, objName, values, "containers")
@@ -139,6 +171,25 @@ func processNestedContainers(specMap map[string]interface{}, objName string, val
 func processContainers(objName string, values helmify.Values, containerType string, containers []interface{}) ([]interface{}, helmify.Values, error) {
 	for i := range containers {
 		containerName := strcase.ToLowerCamel((containers[i].(map[string]interface{})["name"]).(string))
+
+		// Process volumeMounts
+		if volumeMounts, ok := containers[i].(map[string]interface{})["volumeMounts"].([]interface{}); ok {
+			for j, vm := range volumeMounts {
+				vmMap := vm.(map[string]interface{})
+				vmName := vmMap["name"].(string)
+				vmNameCamel := strcase.ToLowerCamel(vmName)
+
+				// Add volumeMount to values
+				err := unstructured.SetNestedField(values, vmMap, objName, containerName, "volumeMounts", vmNameCamel)
+				if err != nil {
+					return nil, nil, fmt.Errorf("%w: unable to set volumeMount value", err)
+				}
+
+				// Replace volumeMount with template
+				containers[i].(map[string]interface{})["volumeMounts"].([]interface{})[j] = fmt.Sprintf(`{{- toYaml .Values.%s.%s.volumeMounts.%s | nindent 10 }}`, objName, containerName, vmNameCamel)
+			}
+		}
+
 		res, exists, err := unstructured.NestedMap(values, objName, containerName, "resources")
 		if err != nil {
 			return nil, nil, err
