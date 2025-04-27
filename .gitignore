@@ -1,4 +1,3 @@
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -27,4 +26,7 @@ testbin/*
 .devcontainer/
 
 dist/
+
+# Test output
+test/testdata/
 
