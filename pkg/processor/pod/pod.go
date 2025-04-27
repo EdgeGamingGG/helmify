@@ -90,6 +90,28 @@ func ProcessSpec(objName string, appMeta helmify.AppMetadata, spec corev1.PodSpe
 		}
 	}
 
+	// process tolerations if presented:
+	if spec.Tolerations != nil {
+		err = unstructured.SetNestedField(specMap, fmt.Sprintf(`{{- toYaml .Values.%s.tolerations | nindent 8 }}`, objName), "tolerations")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		tolerationsUnstr := make([]interface{}, len(spec.Tolerations))
+		for i, t := range spec.Tolerations {
+			tCopy := t
+			unstr, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&tCopy)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w: unable to convert toleration to unstructured", err)
+			}
+			tolerationsUnstr[i] = unstr
+		}
+		err = unstructured.SetNestedSlice(values, tolerationsUnstr, objName, "tolerations")
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	return specMap, values, nil
 }
 

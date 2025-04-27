@@ -1,3 +1,17 @@
+appWithTolerations:
+  app:
+    image:
+      repository: nginx
+      tag: latest
+  replicas: 1
+  tolerations:
+  - effect: NoSchedule
+    key: dedicated
+    operator: Equal
+    value: special-workload
+  - effect: NoExecute
+    key: node-role
+    operator: Exists
 batchJob:
   backoffLimit: 4
   pi:
@@ -22,6 +36,10 @@ fluentdElasticsearch:
       requests:
         cpu: 100m
         memory: 200Mi
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+    operator: Exists
 kubernetesClusterDomain: cluster.local
 myConfig:
   dummyconfigmapkey: dummyconfigmapvalue
@@ -45,12 +63,12 @@ myConfigProps:
           - name: default-oneperhost-pod-template
             distribution: "OnePerHost"
 mySecretCa:
-  caCrt: ""
+  caCrt: "abc"
 mySecretVars:
-  elasticFoobarHunter123MeowtownVerify: ""
-  str: ""
-  var1: ""
-  var2: ""
+  elasticFoobarHunter123MeowtownVerify: "abc"
+  str: "abc"
+  var1: "abc"
+  var2: "abc"
 myapp:
   app:
     args:

@@ -33,10 +33,7 @@ spec:
           name: varlibdockercontainers
           readOnly: true
       terminationGracePeriodSeconds: 30
-      tolerations:
-      - effect: NoSchedule
-        key: node-role.kubernetes.io/master
-        operator: Exists
+      tolerations: {{- toYaml .Values.fluentdElasticsearch.tolerations | nindent 8 }}
       volumes:
       - hostPath:
           path: /var/log

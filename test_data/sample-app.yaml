@@ -375,3 +375,33 @@ spec:
   selector:
     matchLabels:
       app: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-with-tolerations
+  labels:
+    app: app-with-tolerations
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-with-tolerations
+  template:
+    metadata:
+      labels:
+        app: app-with-tolerations
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "special-workload"
+        effect: "NoSchedule"
+      - key: "node-role"
+        operator: "Exists"
+        effect: "NoExecute"

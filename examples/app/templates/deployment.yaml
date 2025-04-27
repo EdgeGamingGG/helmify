@@ -110,3 +110,34 @@ spec:
       - name: sample-pv-storage
         persistentVolumeClaim:
           claimName: {{ include "app.fullname" . }}-my-sample-pv-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.fullname" . }}-app-with-tolerations
+  labels:
+    app: app-with-tolerations
+  {{- include "app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.appWithTolerations.replicas }}
+  selector:
+    matchLabels:
+      app: app-with-tolerations
+    {{- include "app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: app-with-tolerations
+      {{- include "app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - env:
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ quote .Values.kubernetesClusterDomain }}
+        image: {{ .Values.appWithTolerations.app.image.repository }}:{{ .Values.appWithTolerations.app.image.tag
+          | default .Chart.AppVersion }}
+        name: app
+        ports:
+        - containerPort: 80
+        resources: {}
+      tolerations: {{- toYaml .Values.appWithTolerations.tolerations | nindent 8 }}
